@@ -34,6 +34,7 @@ set_point.fc = 'darkred'
 set_point.ec = 'None'
 set_point.center_c = '#013a4b'
 set_point.alpha = 0.7
+set_point.rx = 0.3
 
 # Mean line settings
 set_mean_line = Plot_settings()
@@ -46,3 +47,12 @@ set_text.fs = 30
 set_text.fc = '#013a4b'
 set_text.bbox = {'boxstyle' : 'square', 'facecolor' : "#98b2d3",
                 'edgecolor' : "None", 'alpha' : 0}
+
+# Interval settings
+set_interval = Plot_settings()
+set_interval.fc = "#98b2d3"
+set_interval.lc = '#013a4b'
+set_interval.lw = 3
+set_interval.ec = 'None'
+set_interval.alpha = 0.7
+set_interval.scale = 0.5

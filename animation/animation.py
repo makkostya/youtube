@@ -61,6 +61,6 @@ class Scene(object):
                 for action in self.actions:
                     in_progress += action.run(frame)
                 frame += 1
-                if (times is None) or (frame>= int(times[0]*self.fps) and frame<= int(times[1]*self.fps)):
+                if (times is None) or (frame >= times[0] * self.fps and frame <= times[1] * self.fps):
                     self.fig.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=None, hspace=None)
                     writer.grab_frame(facecolor=self.fig.get_facecolor())
