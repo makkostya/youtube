@@ -56,3 +56,5 @@ set_interval.lw = 3
 set_interval.ec = 'None'
 set_interval.alpha = 0.7
 set_interval.scale = 0.5
+set_interval.bbox = {'boxstyle' : 'square', 'facecolor' : "None",
+                'edgecolor' : "None", 'alpha' : 0}

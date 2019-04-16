@@ -108,6 +108,25 @@ class Frame(object):
         for l in self.axes.get_xticklabels(which='both'):
             l.set_alpha(fargs['alphas'][i])
 
+    def ticks_appear(self, t_begin, t_end):
+        return anim.Action([], self._ticks_appear, t_begin, t_end, {})
+
+    def _ticks_appear(self, i, nframes, fargs):
+        if i == 0:
+            fargs['alphas'] = np.linspace(0, 1., nframes)
+        for l in self.axes.get_xticklabels(which='both'):
+            l.set_alpha(fargs['alphas'][i])
+
+    def ticks_change_alpha(self, t_begin, t_end, alpha):
+        return anim.Action([], self._ticks_change_alpha, t_begin, t_end, {'alpha': alpha})
+
+    def _ticks_change_alpha(self, i, nframes, fargs):
+        if i == 0:
+            alpha = self.axes.get_xticklabels(which='both')[0].get_alpha()
+            fargs['alphas'] = np.linspace(alpha, fargs['alpha'], nframes)
+        for l in self.axes.get_xticklabels(which='both'):
+            l.set_alpha(fargs['alphas'][i])
+
 
 class Hist(object):
     def __init__(self, bins, values, data):
@@ -538,28 +557,28 @@ class Interval(object):
                                                visible=False, alpha=set_interval.alpha)
 
         # Texts
-        p_left, p_center, p_right = self._bounds_to_p()
         self.bounds_textboxes = []
         x = self.left
-        y = 1.2 * self.height
+        y = - 1.8 * self.height * 1.7
         text = str(round(self.left, 1))
         self.bounds_textboxes += [text_obj.Text(x=x, y=y, text=text, visible=False,
                                          color=set_text.fc, alpha=1.,
-                                         fontsize=set_text.fs, bbox=set_text.bbox,
+                                         fontsize=set_text.fs, bbox=set_interval.bbox,
                                          verticalalignment='center', horizontalalignment='center')]
         x = self.right
         text = str(round(self.right, 1))
         self.bounds_textboxes += [text_obj.Text(x=x, y=y, text=text, visible=False,
                                                 color=set_text.fc, alpha=1.,
-                                                fontsize=set_text.fs, bbox=set_text.bbox,
+                                                fontsize=set_text.fs, bbox=set_interval.bbox,
                                                 verticalalignment='center', horizontalalignment='center')]
 
         x = (self.left + self.right) / 2.
+        y = 1.8 * self.height * 1.7
         p_left, p_center, p_right = self._bounds_to_p()
-        text = str(round(100. * p_center, 0))
-        self.p_textbox = [text_obj.Text(x=x, y=y, text=text, visible=False,
+        text = str(int(round(100. * p_center))) + '%'
+        self.bounds_textboxes += [text_obj.Text(x=x, y=y, text=text, visible=False,
                                                 color=set_text.fc, alpha=1.,
-                                                fontsize=set_text.fs, bbox=set_text.bbox,
+                                                fontsize=set_text.fs, bbox=set_interval.bbox,
                                                 verticalalignment='center', horizontalalignment='center')]
 
         self.line_left.set_zorder(10)
@@ -568,34 +587,41 @@ class Interval(object):
 
         self.artists = [self.line_left, self.line_right, self.collection]
         self.artists += self.bounds_textboxes
-        self.artists += self.p_textbox
 
     def update_artists(self):
+        self.update_verts(self.height)
         self.collection.set_verts([self.verts])
-        self.line_right.set_data([self.right, self.right], [-self.height, self.height])
-        self.line_left.set_data([self.left, self.left], [-self.height, self.height])
+        self.line_right.set_data([self.right, self.right], [self.height, - 1.7*self.height])
+        self.line_left.set_data([self.left, self.left], [self.height, - 1.7*self.height])
 
         x = self.left
-        y = 1.2 * self.height
+        y = - 1.8 * self.height * 1.7
         text = str(round(self.left, 1))
         self.bounds_textboxes[0].set_position((x, y))
         self.bounds_textboxes[0].set_text(text)
 
         x = self.right
-        y = 1.2 * self.height
         text = str(round(self.right, 1))
-        self.bounds_textboxes[0].set_position((x, y))
-        self.bounds_textboxes[0].set_text(text)
+        self.bounds_textboxes[1].set_position((x, y))
+        self.bounds_textboxes[1].set_text(text)
 
         x = (self.left + self.right) / 2.
+        y = 1.8 * self.height * 1.7
         p_left, p_center, p_right = self._bounds_to_p()
-        text = str(round(100. * p_center, 0))
-        self.p_textbox[0].set_position((x, y))
-        self.p_textbox[0].set_text(text)
+        text = str(int(round(100. * p_center))) + '%'
+        self.bounds_textboxes[2].set_position((x, y))
+        self.bounds_textboxes[2].set_text(text)
+
+    def _p_to_bounds(self, p):
+        p = 1 - p
+        mean = (self.left + self.right) / 2.
+        self.left = norm.ppf(p / 2, mean, self.pdf.std)
+        self.right = norm.ppf(1 - p / 2, mean, self.pdf.std)
 
     def _bounds_to_p(self):
-        p_left = norm.cdf(self.left, self.pdf.mean, self.pdf.std)
-        p_tmp = norm.cdf(self.right, self.pdf.mean, self.pdf.std)
+        mean = (self.left + self.right) / 2.
+        p_left = norm.cdf(self.left, mean, self.pdf.std)
+        p_tmp = norm.cdf(self.right, mean, self.pdf.std)
         p_center = p_tmp - p_left
         p_right = 1 - p_tmp
         return [p_left, p_center, p_right]
@@ -607,7 +633,8 @@ class Interval(object):
         if i == 0:
             fargs['range'] = np.linspace(0, self.height, nframes)
             self.line_left.set_visible(True)
-        self.line_left.set_data([self.left, self.left], [fargs['range'][i], -fargs['range'][i]])
+        self.update_artists()
+        self.line_left.set_data([self.left, self.left], [-1.7*fargs['range'][i], fargs['range'][i]])
 
     def line_right_appear(self, t_begin, t_end):
         return anim.Action([], self._line_right_appear, t_begin, t_end, {})
@@ -616,7 +643,8 @@ class Interval(object):
         if i == 0:
             fargs['range'] = np.linspace(0, self.height, nframes)
             self.line_right.set_visible(True)
-        self.line_right.set_data([self.right, self.right], [fargs['range'][i], -fargs['range'][i]])
+        self.update_artists()
+        self.line_right.set_data([self.right, self.right], [-1.7*fargs['range'][i], fargs['range'][i]])
 
     def area_appear(self, t_begin, t_end):
         return anim.Action([], self._area_appear, t_begin, t_end, {})
@@ -625,18 +653,33 @@ class Interval(object):
         if i == 0:
             fargs['range'] = np.linspace(0, self.height, nframes)
             self.collection.set_visible(True)
+        self.update_artists()
         self.update_verts(fargs['range'][i])
         self.collection.set_verts([self.verts])
 
-    def area_appear(self, t_begin, t_end):
-        return anim.Action([], self._area_appear, t_begin, t_end, {})
+    def text_appear(self, t_begin, t_end, idx=0):
+        return anim.Action([], self._text_appear, t_begin, t_end, {'idx': idx})
 
-    def _area_appear(self, i, nframes, fargs):
+    def _text_appear(self, i, nframes, fargs):
         if i == 0:
-            fargs['range'] = np.linspace(0, self.height, nframes)
-            self.collection.set_visible(True)
-        self.update_verts(fargs['range'][i])
-        self.collection.set_verts([self.verts])
+            fargs['frames'] = np.linspace(0, 1, nframes)
+            self.bounds_textboxes[fargs['idx']].set_visible(True)
+        self.update_artists()
+        idx = fargs['idx']
+        self.bounds_textboxes[idx].set_alpha(fargs['frames'][i])
+        # bbox = set_text.bbox.copy()
+        # bbox['alpha'] = fargs['frames'][i]
+        # self.textboxes[idx].set_bbox(bbox)
+
+    def p_change(self, t_begin, t_end, p):
+        return anim.Action([], self._p_change, t_begin, t_end, {'p': p})
+
+    def _p_change(self, i, nframes, fargs):
+        if i == 0:
+            _, p_center, _ = self._bounds_to_p()
+            fargs['range'] = np.linspace(p_center, fargs['p'], nframes)
+        self._p_to_bounds(fargs['range'][i])
+        self.update_artists()
 
 
 
